@@ -29,9 +29,16 @@ def get(name):
   cursor = connection.cursor()
   command = "select message from snippets where keyword = %s"
   cursor.execute(command, (name,))
-  snippet = cursor.fetchone()[0]
-  logging.debug("Snippet retrieved successfully.")    
-  return snippet
+  row = cursor.fetchone()
+  connection.commit()
+  
+  if not row:
+    # No snippet was found with that name.
+    logging.debug("Snippet does not exist.")
+    return "ERROR: Snippet with {} name does not exist.".format(name)
+  else:
+    logging.debug("Snippet retrieved successfully.")
+    return row[0]
 
 def delete(name):
     """Delete the snippet with a given name.
