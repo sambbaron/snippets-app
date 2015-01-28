@@ -15,14 +15,12 @@ def put(name, snippet):
     
   logging.info("Storing snippet {!r}: {!r}".format(name, snippet))
   cursor = connection.cursor()
-  try:
-    command = "insert into snippets values (%s, %s)"
-    cursor.execute(command, (name, snippet))
-  except psycopg2.IntegrityError as e:
-    connection.rollback()
-    command = "update snippets set message=%s where keyword=%s"
-    cursor.execute(command, (snippet, name))
-  connection.commit()
+  with connection, connection.cursor() as cursor:
+    try:
+      cursor.execute("insert into snippets values (%s, %s)", (name, snippet))
+    except psycopg2.IntegrityError as e:
+      connection.rollback()
+      cursor.execute("update snippets set message=%s where keyword=%s", (snippet, name))
   logging.debug("Snippet stored successfully.")
   return name, snippet
   
@@ -31,11 +29,9 @@ def get(name):
   If there is no such snippet, return error message that snippet with name does not exist
   Returns the snippet."""
   logging.info("Retrieving snippet {!r}".format(name))
-  cursor = connection.cursor()
-  command = "select message from snippets where keyword = %s"
-  cursor.execute(command, (name,))
-  row = cursor.fetchone()
-  connection.commit()
+  with connection, connection.cursor() as cursor:
+    cursor.execute("select message from snippets where keyword=%s", (name,))
+    row = cursor.fetchone()
   
   if not row:
     # No snippet was found with that name.
@@ -66,13 +62,13 @@ def main():
     # Subparser for the put command
     logging.debug("Constructing put subparser")
     put_parser = subparsers.add_parser("put", help="Store a snippet")
-    put_parser.add_argument("name", help="Thpyte name of the snippet")
+    put_parser.add_argument("name", help="The name of the snippet")
     put_parser.add_argument("snippet", help="The snippet text")
     
     # Subparser for the get command
     logging.debug("Constructing get subparser")
     get_parser = subparsers.add_parser("get", help="Retrieve a snippet")
-    get_parser.add_argument("name", help="Thpyte name of the snippet")    
+    get_parser.add_argument("name", help="The name of the snippet")    
 
     arguments = parser.parse_args(sys.argv[1:])
     # Convert parsed arguments from Namespace to dictionary
