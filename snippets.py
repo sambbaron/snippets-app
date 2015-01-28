@@ -9,20 +9,20 @@ logging.debug("Connecting to PostgreSQL")
 connection = psycopg2.connect("dbname='snippets' user='action' host='localhost'")
 logging.debug("Database connection established.")
 
-def put(name, snippet):
+def put(name, snippet, hidden = False):
   """Store a snippet with an associated name.
   Returns the name and the snippet"""
     
-  logging.info("Storing snippet {!r}: {!r}".format(name, snippet))
+  logging.info("Storing snippet {!r}: {!r}, hidden flag = {!r}".format(name, snippet, hidden))
   cursor = connection.cursor()
   with connection, connection.cursor() as cursor:
     try:
-      cursor.execute("insert into snippets values (%s, %s)", (name, snippet))
+      cursor.execute("insert into snippets values (%s, %s, %s)", (name, snippet, hidden))
     except psycopg2.IntegrityError as e:
       connection.rollback()
-      cursor.execute("update snippets set message=%s where keyword=%s", (snippet, name))
+      cursor.execute("update snippets set message=%s, hidden=%s where keyword=%s", (snippet, hidden, name))
   logging.debug("Snippet stored successfully.")
-  return name, snippet
+  return name, snippet, hidden
   
 def get(name):
   """Retrieve the snippet with a given name.
@@ -54,7 +54,7 @@ def catalog():
   
   logging.info("Retrieving name catalog")
   with connection, connection.cursor() as cursor:
-    cursor.execute("select keyword from snippets order by keyword")
+    cursor.execute("select keyword from snippets where not hidden order by keyword")
     names = cursor.fetchall()
   logging.debug("Names catalog retrieved successfully.")
   return names
@@ -65,7 +65,7 @@ def search(searchstr):
 
   logging.info("Searching names for {!r}".format(searchstr))
   with connection, connection.cursor() as cursor:
-    cursor.execute("select keyword from snippets where keyword like %s order by keyword", ('%{}%'.format(searchstr),))
+    cursor.execute("select keyword from snippets where keyword like %s and not hidden order by keyword", ('%{}%'.format(searchstr),))
     names = cursor.fetchall()
   logging.debug("Names catalog searched successfully.")
   return searchstr, names
@@ -91,7 +91,9 @@ def main():
     put_parser = subparsers.add_parser("put", help="Store a snippet")
     put_parser.add_argument("name", help="The name of the snippet")
     put_parser.add_argument("snippet", help="The snippet text")
-    
+    put_parser.add_argument("--hide", dest="hidden", help="Hide snippet in catalog", action="store_true")
+    put_parser.add_argument("--show, --unhide, --no-hide, -hide=0", dest="hidden", help="Show snippet in catalog", action="store_false")
+        
     # Subparser for the get command
     logging.debug("Constructing get subparser")
     get_parser = subparsers.add_parser("get", help="Retrieve a snippet")
@@ -112,8 +114,8 @@ def main():
     command = arguments.pop("command")
 
     if command == "put":
-      name, snippet = put(**arguments)
-      print("Stored {!r} as {!r}".format(snippet, name))
+      name, snippet, hidden = put(**arguments)
+      print("Stored {!r} as {!r}, hidden flag = {!r}".format(snippet, name, hidden))
     elif command == "get":
       snippet = get(**arguments)
       print("Retrieved snippet: {!r}".format(snippet))
