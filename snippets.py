@@ -51,12 +51,33 @@ def delete(name):
   
 def catalog():
   """Return listing of snippet names"""
+  
   logging.info("Retrieving name catalog")
   with connection, connection.cursor() as cursor:
     cursor.execute("select keyword from snippets order by keyword")
     names = cursor.fetchall()
   logging.debug("Names catalog retrieved successfully.")
   return names
+
+def search(searchstr):
+  """Search for string in names
+  Return names"""
+
+  logging.info("Searching names for {!r}".format(searchstr))
+  with connection, connection.cursor() as cursor:
+    cursor.execute("select keyword from snippets where keyword like %s order by keyword", ('%{}%'.format(searchstr),))
+    names = cursor.fetchall()
+  logging.debug("Names catalog searched successfully.")
+  return searchstr, names
+
+def print_names(names, search_filter = ""):
+  """Print catalog of names"""
+  if search_filter:
+    search_filter = " (Searched for {}) ".format(search_filter)
+  print "Name Catalog{}:".format(search_filter)
+  print "------------"
+  for name in names:
+    print name[0]
   
 def main():
     """Main function"""
@@ -78,7 +99,12 @@ def main():
     
     # Subparser for catalog command
     logging.debug("Constructing catalog subparser")
-    get_parser = subparsers.add_parser("catalog", help="Retrieve catalog of snippet names")
+    catalog_parser = subparsers.add_parser("catalog", help="Retrieve catalog of snippet names")
+    
+    # Subparser for the search command
+    logging.debug("Constructing search subparser")
+    search_parser = subparsers.add_parser("search", help="Search a name")
+    search_parser.add_argument("searchstr", help="The text string to search") 
 
     arguments = parser.parse_args(sys.argv[1:])
     # Convert parsed arguments from Namespace to dictionary
@@ -92,10 +118,12 @@ def main():
       snippet = get(**arguments)
       print("Retrieved snippet: {!r}".format(snippet))
     elif command == "catalog":
-      print "Name Catalog:"
-      print "------------"
-      for name in catalog():
-        print name[0]
+      names = catalog()
+      print_names(names)
+    elif command == "search":
+      searchstr, names = search(**arguments)
+      print_names(names, searchstr)
+      
         
 if __name__ == "__main__":
     main()
