@@ -42,15 +42,21 @@ def get(name):
     return row[0]
 
 def delete(name):
-    """Delete the snippet with a given name.
-
-    If there is no such snippet, return error message that snippet with name does not exist
-
-    Returns the snippet.
-    """
-    logging.error("FIXME: Unimplemented - delete({!r})".format(name))
-    return ""
-
+  """Delete the snippet with a given name.
+  If there is no such snippet, return error message that snippet with name does not exist
+  Returns the snippet.    """
+    
+  logging.error("FIXME: Unimplemented - delete({!r})".format(name))
+  return ""
+  
+def catalog():
+  """Return listing of snippet names"""
+  logging.info("Retrieving name catalog")
+  with connection, connection.cursor() as cursor:
+    cursor.execute("select keyword from snippets order by keyword")
+    names = cursor.fetchall()
+  logging.debug("Names catalog retrieved successfully.")
+  return names
   
 def main():
     """Main function"""
@@ -68,7 +74,11 @@ def main():
     # Subparser for the get command
     logging.debug("Constructing get subparser")
     get_parser = subparsers.add_parser("get", help="Retrieve a snippet")
-    get_parser.add_argument("name", help="The name of the snippet")    
+    get_parser.add_argument("name", help="The name of the snippet") 
+    
+    # Subparser for catalog command
+    logging.debug("Constructing catalog subparser")
+    get_parser = subparsers.add_parser("catalog", help="Retrieve catalog of snippet names")
 
     arguments = parser.parse_args(sys.argv[1:])
     # Convert parsed arguments from Namespace to dictionary
@@ -76,11 +86,16 @@ def main():
     command = arguments.pop("command")
 
     if command == "put":
-        name, snippet = put(**arguments)
-        print("Stored {!r} as {!r}".format(snippet, name))
+      name, snippet = put(**arguments)
+      print("Stored {!r} as {!r}".format(snippet, name))
     elif command == "get":
-        snippet = get(**arguments)
-        print("Retrieved snippet: {!r}".format(snippet))
-
+      snippet = get(**arguments)
+      print("Retrieved snippet: {!r}".format(snippet))
+    elif command == "catalog":
+      print "Name Catalog:"
+      print "------------"
+      for name in catalog():
+        print name[0]
+        
 if __name__ == "__main__":
     main()
