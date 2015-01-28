@@ -46,8 +46,10 @@ def delete(name):
   If there is no such snippet, return error message that snippet with name does not exist
   Returns the snippet.    """
     
-  logging.error("FIXME: Unimplemented - delete({!r})".format(name))
-  return ""
+  logging.info("Deleting snippet {!r}".format(name))
+  with connection, connection.cursor() as cursor:
+    cursor.execute("delete from snippets where keyword=%s", (name,))
+  return name
   
 def catalog():
   """Return listing of snippet names"""
@@ -99,6 +101,11 @@ def main():
     get_parser = subparsers.add_parser("get", help="Retrieve a snippet")
     get_parser.add_argument("name", help="The name of the snippet") 
     
+     # Subparser for the delete command
+    logging.debug("Constructing delete subparser")
+    delete_parser = subparsers.add_parser("delete", help="Delete a snippet")
+    delete_parser.add_argument("name", help="The name of the snippet") 
+    
     # Subparser for catalog command
     logging.debug("Constructing catalog subparser")
     catalog_parser = subparsers.add_parser("catalog", help="Retrieve catalog of snippet names")
@@ -119,6 +126,9 @@ def main():
     elif command == "get":
       snippet = get(**arguments)
       print("Retrieved snippet: {!r}".format(snippet))
+    elif command == "delete":
+      name =  delete(**arguments)
+      print("Deleted snippet: {!r}".format(name))
     elif command == "catalog":
       names = catalog()
       print_names(names)
